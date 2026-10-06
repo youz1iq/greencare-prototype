@@ -27,6 +27,10 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
 .nav button:focus-visible{ outline-color:var(--accent); }
 
 
+.zonelist{ display:flex; flex-direction:column; gap:16px; }
+.zone.closed{ background:#E9ECE7; border:2px solid #C8D0C6; }
+.zone.closed .name, .zone.closed .where{ color:#5A655D; }
+.zone .cta.done{ color:#46524A; }
 /* landing page */
 .landing{ flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:28px; padding:32px 20px; text-align:center; }
 .landing[hidden], .stage[hidden], .nav[hidden]{ display:none; }
@@ -135,30 +139,18 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
         <section class="screen active" data-n="1" aria-label="Today's tasks">
           <div class="brand"><b>GreenCare</b><span>Marat</span></div>
           <h1>Today</h1>
-          <span class="sub">3 zones to water</span>
-          <button type="button" class="zone open" data-go="2">
-            <span class="name">Zone 1</span>
-            <span class="where">Main entrance, flower beds</span>
-            <span class="cta">To do · open</span>
-          </button>
-          <button type="button" class="zone open" data-go="2">
-            <span class="name">Zone 2</span>
-            <span class="where">Front lawn</span>
-            <span class="cta">To do · open</span>
-          </button>
-          <button type="button" class="zone open" data-go="2">
-            <span class="name">Zone 3</span>
-            <span class="where">Young trees</span>
-            <span class="cta">To do · open</span>
-          </button>
+          <span class="sub" id="zoneSub">3 zones to water</span>
+          <div class="zonelist" id="zoneList"></div>
+          <div class="spacer"></div>
+          <button type="button" class="link" id="resetBtn">Reset demo</button>
         </section>
 
         <!-- 2 Task: arrive -->
         <section class="screen" data-n="2" aria-label="Task: arrive at the zone">
           <button type="button" class="back" data-go="1">← Today</button>
-          <h1>Zone 1</h1>
-          <span class="sub">Main entrance, flower beds</span>
-          <div class="card"><small>Task</small><strong>Water the flower beds</strong></div>
+          <h1 id="z2name">Zone 1</h1>
+          <span class="sub" id="z2where">Main entrance, flower beds</span>
+          <div class="card"><small>Task</small><strong id="z2task">Water the flower beds</strong></div>
           <button type="button" class="btn ghost med" id="mapBtn">Show on map</button>
           <div class="spacer"></div>
           <button type="button" class="btn" data-go="3">I have arrived</button>
@@ -167,8 +159,8 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
 
         <!-- 3 Watered + condition -->
         <section class="screen" data-n="3" aria-label="Watered and plant condition">
-          <button type="button" class="back" data-go="2">← Zone 1</button>
-          <h1>Zone 1</h1>
+          <button type="button" class="back" data-go="2" id="z3back">← Zone 1</button>
+          <h1 id="z3name">Zone 1</h1>
           <span class="sub">You are at the zone</span>
           <button type="button" class="btn ghost" id="watered" aria-pressed="false">Watered</button>
           <div class="q" id="howq">How are the plants?</div>
@@ -193,10 +185,10 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
               <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#1F5A32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
             </div>
             <h1>Saved</h1>
-            <p>Zone 1 is done. Facilities staff can see it.</p>
+            <p id="z4text">Zone 1 is closed. Facilities staff can see it.</p>
             <p class="note">No connection? The record stays on the phone and is sent later.</p>
           </div>
-          <button type="button" class="btn" data-go="1">Next zone</button>
+          <button type="button" class="btn" data-go="1" id="z4btn">Next zone</button>
         </section>
 
         <!-- 5 GPS error -->
@@ -206,7 +198,7 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
               <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#8A4B00" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><path d="M12 7.5v2.5"/><path d="M12 12.5v.01"/></svg>
             </div>
             <h1>We cannot confirm you are at the zone</h1>
-            <p>Move closer to Zone 1 and try again, or ask facilities staff to confirm.</p>
+            <p id="z5text">Move closer to Zone 1 and try again, or ask facilities staff to confirm.</p>
           </div>
           <button type="button" class="btn" data-go="3">Try again</button>
           <button type="button" class="btn plain" id="askBtn">Ask facilities to confirm</button>
@@ -254,6 +246,51 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
   var toastTimer = null;
   var cur = 1;
 
+
+  /* zones: the state of the demo */
+  var zones = [
+    { id: 1, name: 'Zone 1', where: 'Main entrance, flower beds', task: 'Water the flower beds', done: false },
+    { id: 2, name: 'Zone 2', where: 'Front lawn', task: 'Water the lawn', done: false },
+    { id: 3, name: 'Zone 3', where: 'Young trees', task: 'Water the young trees', done: false }
+  ];
+  var sel = 1;
+  function $(id) { return document.getElementById(id); }
+  function openCount() { return zones.filter(function (z) { return !z.done; }).length; }
+
+  function renderZones() {
+    var left = openCount();
+    $('zoneSub').textContent = left === 0 ? 'All zones are closed' : left + (left === 1 ? ' zone' : ' zones') + ' to water';
+    var list = $('zoneList');
+    list.innerHTML = '';
+    zones.forEach(function (z) {
+      var el = document.createElement(z.done ? 'div' : 'button');
+      if (!z.done) { el.type = 'button'; el.setAttribute('data-zone', z.id); }
+      el.className = 'zone ' + (z.done ? 'closed' : 'open');
+      el.innerHTML = '<span class="name">' + z.name + '</span><span class="where">' + z.where + '</span><span class="cta' + (z.done ? ' done' : '') + '">' + (z.done ? 'Closed \u2713' : 'To do \u00b7 open') + '</span>';
+      list.appendChild(el);
+    });
+  }
+  function renderSelected() {
+    var z = zones[sel - 1];
+    $('z2name').textContent = z.name;
+    $('z2where').textContent = z.where;
+    $('z2task').textContent = z.task;
+    $('z3back').textContent = '\u2190 ' + z.name;
+    $('z3name').textContent = z.name;
+    $('z4text').textContent = z.name + ' is closed. Facilities staff can see it.';
+    $('z4btn').textContent = openCount() > 0 ? 'Next zone' : 'Back to today\u2019s tasks';
+    $('z5text').textContent = 'Move closer to ' + z.name + ' and try again, or ask facilities staff to confirm.';
+  }
+  function resetForm() {
+    var w = $('watered');
+    w.setAttribute('aria-pressed', 'false'); w.textContent = 'Watered';
+    Array.prototype.forEach.call(document.querySelectorAll('.cond'), function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-cond') === 'Good' ? 'true' : 'false');
+    });
+    $('commentBox').classList.remove('show');
+    $('comment').value = '';
+  }
+
   function say(msg) {
     toast.textContent = msg;
     toast.classList.add('show');
@@ -263,6 +300,12 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
 
   function show(n) {
     cur = Math.max(1, Math.min(5, n));
+    if (cur === 4) { zones[sel - 1].done = true; }
+    if (cur === 1) {
+      var firstOpen = zones.filter(function (z) { return !z.done; })[0];
+      if (firstOpen) { sel = firstOpen.id; }
+    }
+    renderZones(); renderSelected();
     screens.forEach(function (s) { s.classList.toggle('active', Number(s.getAttribute('data-n')) === cur); });
     stepBtns.forEach(function (b) {
       if (Number(b.getAttribute('data-step')) === cur) { b.setAttribute('aria-current', 'step'); }
@@ -275,6 +318,8 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
   }
 
   document.addEventListener('click', function (e) {
+    var zb = e.target.closest('[data-zone]');
+    if (zb) { sel = Number(zb.getAttribute('data-zone')); resetForm(); show(2); return; }
     var go = e.target.closest('[data-go]');
     if (go) { show(Number(go.getAttribute('data-go'))); return; }
     var st = e.target.closest('[data-step]');
@@ -295,6 +340,11 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
     var on = this.getAttribute('aria-pressed') === 'true';
     this.setAttribute('aria-pressed', on ? 'false' : 'true');
     this.textContent = on ? 'Watered' : 'Watered \u2713';
+  });
+  $('resetBtn').addEventListener('click', function () {
+    zones.forEach(function (z) { z.done = false; });
+    sel = 1; resetForm(); renderZones(); renderSelected();
+    say('Demo reset');
   });
   document.getElementById('mapBtn').addEventListener('click', function () {
     say('Opens the place in the map app');
