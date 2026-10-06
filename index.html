@@ -26,6 +26,20 @@ button,a,textarea{ font-family:inherit; }
 button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-offset:2px; }
 .nav button:focus-visible{ outline-color:var(--accent); }
 
+
+/* landing page */
+.landing{ flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:28px; padding:32px 20px; text-align:center; }
+.landing[hidden], .stage[hidden], .nav[hidden]{ display:none; }
+.landing .mark{ width:72px; height:72px; border-radius:20px; background:var(--accent); display:flex; align-items:center; justify-content:center; }
+.landing h1{ margin:0; font-size:clamp(36px, 7vw, 64px); line-height:1.05; letter-spacing:-0.5px; }
+.landing .lead{ margin:0; max-width:620px; font-size:clamp(18px, 2.6vw, 22px); line-height:1.5; color:var(--muted); }
+.landing .points{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-width:720px; }
+.landing .points li{ padding:10px 16px; border-radius:999px; border:2px solid var(--line); background:var(--panel); font-size:16px; font-weight:600; }
+.landing .login{ min-height:56px; padding:0 32px; border-radius:14px; border:0; background:var(--accent); color:var(--accent-ink); font-size:20px; font-weight:700; cursor:pointer; }
+.landing .login:focus-visible{ outline-color:var(--accent); }
+.landing .foot{ margin:0; font-size:14px; color:var(--muted); }
+.nav .home{ background:none; border:0; padding:0 4px; min-height:32px; color:var(--muted); font-size:14px; text-decoration:underline; cursor:pointer; }
+
 /* page chrome */
 .stage{ flex:1; min-height:0; display:flex; align-items:flex-start; justify-content:center; padding:16px 12px 8px; overflow:hidden; }
 .fit{ width:410px; height:864px; flex:none; }
@@ -96,7 +110,23 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
 </head>
 <body>
 
-<main class="stage" id="stage">
+<section class="landing" id="landing" aria-label="GreenCare home">
+  <div class="mark" aria-hidden="true">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-8"/><path d="M12 13c0-4 3-7 8-7 0 5-3 8-8 8z"/><path d="M12 15c0-3-2.5-5.5-7-5.5 0 4 2.5 6.5 7 6.5z"/></svg>
+  </div>
+  <h1>GreenCare</h1>
+  <p class="lead">Green space care system: a watering schedule, confirmation that the work was done, and a record of plant condition. Gardeners see their tasks for the day in a mobile app, and the facilities department plans and checks the work.</p>
+  <ul class="points">
+    <li>Daily task list</li>
+    <li>GPS check-in and check-out</li>
+    <li>Plant condition record</li>
+    <li>Works offline</li>
+  </ul>
+  <button type="button" class="login" id="loginBtn">Log in to your account</button>
+  <p class="foot">ICT midterm project &middot; interactive prototype (demo login, no password)</p>
+</section>
+
+<main class="stage" id="stage" hidden>
   <div class="fit" id="fit">
     <div class="phone">
       <div class="viewport">
@@ -188,8 +218,8 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
   </div>
 </main>
 
-<nav class="nav" aria-label="Prototype screens">
-  <p class="caption" id="caption">1 of 5 · Today's tasks</p>
+<nav class="nav" id="nav" aria-label="Prototype screens" hidden>
+  <p class="caption" id="caption">1 of 5 · Today's tasks &middot; <button type="button" class="home" id="homeBtn">Home</button></p>
   <div class="row">
     <button type="button" class="arrow" id="prev">← Back</button>
     <div class="step" id="steps">
@@ -217,6 +247,9 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
   var prev = document.getElementById('prev');
   var next = document.getElementById('next');
   var caption = document.getElementById('caption');
+  var landing = document.getElementById('landing');
+  var stageEl = document.getElementById('stage');
+  var navEl = document.getElementById('nav');
   var toast = document.getElementById('toast');
   var toastTimer = null;
   var cur = 1;
@@ -235,7 +268,7 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
       if (Number(b.getAttribute('data-step')) === cur) { b.setAttribute('aria-current', 'step'); }
       else { b.removeAttribute('aria-current'); }
     });
-    caption.textContent = cur + ' of 5 · ' + names[cur];
+    caption.firstChild.nodeValue = cur + ' of 5 \u00b7 ' + names[cur] + ' \u00b7 ';
     prev.disabled = cur === 1;
     next.textContent = cur === 5 ? 'Restart' : 'Next →';
     toast.classList.remove('show');
@@ -275,6 +308,7 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
 
   document.addEventListener('keydown', function (e) {
     if (e.target && e.target.tagName === 'TEXTAREA') { return; }
+    if (navEl.hidden) { return; }
     if (e.key === 'ArrowRight') { show(cur + 1); }
     if (e.key === 'ArrowLeft') { show(cur - 1); }
   });
@@ -293,8 +327,21 @@ button:focus-visible,textarea:focus-visible{ outline:3px solid #1F5A32; outline-
     fit.firstElementChild.style.transform = 'scale(' + s + ')';
   }
   window.addEventListener('resize', resize);
-  resize();
+
+  function openApp() {
+    landing.hidden = true; stageEl.hidden = false; navEl.hidden = false;
+    resize(); show(1);
+    if (history.replaceState) { history.replaceState(null, '', '#app'); }
+  }
+  function openHome() {
+    landing.hidden = false; stageEl.hidden = true; navEl.hidden = true;
+    if (history.replaceState) { history.replaceState(null, '', location.pathname + location.search); }
+    document.getElementById('loginBtn').focus();
+  }
+  document.getElementById('loginBtn').addEventListener('click', openApp);
+  document.getElementById('homeBtn').addEventListener('click', openHome);
   show(1);
+  if (location.hash === '#app') { openApp(); }
 })();
 </script>
 </body>
